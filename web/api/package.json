@@ -11,6 +11,8 @@
   "description": "",
   "dependencies": {
     "express": "^4.21.0",
-    "express-ws": "^5.0.2"
+    "express-ws": "^5.0.2",
+    "swagger-client": "^3.29.3",
+    "swagger-ui-express": "^5.0.1"
   }
 }
