@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = --std=c++20 -lminizip -lcurl -lcurlpp
+CFLAGS = --std=c++20 -lcurl -lcurlpp
 TARGET = simp
 SOURCES = main.cpp
 
