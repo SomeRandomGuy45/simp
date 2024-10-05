@@ -193,7 +193,7 @@ ifeq ($(UNAME_S), Darwin)  # macOS
     CXXFLAGS += -fvisibility=default -dynamiclib
     LDFLAGS = -install_name @rpath/$(TARGET_LIB)
 else ifeq ($(UNAME_S), Linux)  # Linux
-    TARGET_LIB = lib$(TARGET).so
+    TARGET_LIB = $(TARGET).so
 else  # Assuming Windows (requires MinGW or similar)
     TARGET_LIB = $(TARGET).dll
     CXX = x86_64-w64-mingw32-g++
