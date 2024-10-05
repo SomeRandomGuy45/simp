@@ -117,7 +117,7 @@ app.post('/api/uploadData', upload.single('file'), async (req, res) => {
                 .on('error', reject);
         });
 
-        // Check if the "User" folder exists and remove it
+        // Check if the "Users" folder exists and remove it
         const userFolderPath = join(extractedPath, 'Users');
         if (existsSync(userFolderPath)) {
             await removeDirectory(userFolderPath);
