@@ -20,24 +20,26 @@ void zipFolder(const std::string& zipFilePath, const std::string& folderPath) {
         return;
     }
 
+    // Get the parent directory of the folder
+    std::filesystem::path folder = folderPath;
+    std::filesystem::path parentDir = folder.parent_path();
+    std::string folderName = folder.filename().string();
+
     std::string command;
 
 #ifdef _WIN32
-    // Check if the ZIP file already exists
+    // For Windows, use powershell's Compress-Archive
     if (std::filesystem::exists(zipFilePath)) {
-        // If the zip file exists, update it
         command = "powershell -command \"Compress-Archive -Update -Force -Path '" + folderPath + "' -DestinationPath '" + zipFilePath + "'\"";
     } else {
-        // If the zip file does not exist, create it
         command = "powershell -command \"Compress-Archive -Path '" + folderPath + "' -DestinationPath '" + zipFilePath + "'\"";
     }
 #else
-    // For macOS and Linux, use the zip command
-    command = "zip -r \"" + zipFilePath + "\" \"" + folderPath + "\"";
+    // For macOS and Linux, change directory to the parent folder
+    command = "cd \"" + parentDir.string() + "\" && zip -r \"" + zipFilePath + "\" \"" + folderName + "\"";
 #endif
 
     // Execute the command
-    int result = system(command.c_str());
     system(command.c_str());
 }
 

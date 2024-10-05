@@ -7,9 +7,22 @@ const multer = require('multer');
 const { diskStorage } = require('multer');
 const { join } = require('path');
 const { existsSync } = require('fs');
+const { createReadStream, createWriteStream, promises: fsPromises } = require('fs');
+const unzipper = require('unzipper');
+const archiver = require('archiver'); // Import archiver
+const { basename } = require('path');
 
 const app = express();
 expressWs(app);
+
+async function removeDirectory(path) {
+    try {
+        await fsPromises.rm(path, { recursive: true, force: true });
+        console.log(`Removed directory: ${path}`);
+    } catch (error) {
+        console.error(`Failed to remove directory ${path}:`, error);
+    }
+}
 
 // Set up multer for handling file uploads
 const storage = diskStorage({
@@ -64,7 +77,7 @@ app.use(json());
 app.use('/docs', serve, setup(swaggerSpec));
 
 app.get('/', (req, res) => {
-    res.json({success : true});
+    res.json({ success: true });
 });
 
 /**
@@ -87,12 +100,64 @@ app.get('/', (req, res) => {
  *       400:
  *         description: Invalid file type or no file provided
  */
-app.post('/api/uploadData', upload.single('file'), (req, res) => {
+app.post('/api/uploadData', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).send('No file uploaded or invalid file type. Only .zip files are allowed.');
     }
-    res.send(`File uploaded successfully: ${req.file.filename}`);
+
+    const filePath = join(__dirname, 'uploads', req.file.filename);
+    const extractedPath = join(__dirname, 'uploads', basename(req.file.filename, '.zip'));
+
+    try {
+        // Unzip the file
+        await new Promise((resolve, reject) => {
+            createReadStream(filePath)
+                .pipe(unzipper.Extract({ path: extractedPath }))
+                .on('close', resolve)
+                .on('error', reject);
+        });
+
+        // Check if the "User" folder exists and remove it
+        const userFolderPath = join(extractedPath, 'Users');
+        if (existsSync(userFolderPath)) {
+            await removeDirectory(userFolderPath);
+        }
+
+        // Remove the original ZIP file after extraction
+        await removeDirectory(filePath); // Ensure this is awaited
+
+        // Re-zip the directory
+        const zipFilePath = join(__dirname, 'uploads', req.file.filename); // Adjust the path if needed
+        const output = createWriteStream(zipFilePath);
+        const archive = archiver('zip', {
+            zlib: { level: 9 } // Set the compression level
+        });
+
+        // Set up the event listeners
+        output.on('close', () => {
+            console.log(`${archive.pointer()} total bytes`);
+            console.log('Zip file has been created successfully.');
+            // Send response after the ZIP file is fully created
+            res.send(`File uploaded, processed, and re-zipped successfully: ${zipFilePath}`);
+        });
+
+        archive.on('error', (err) => {
+            throw err;
+        });
+
+        archive.pipe(output);
+        archive.directory(extractedPath + '/', false); // Add the directory to the archive
+
+        // Finalize the archive
+        await archive.finalize(); // Make sure to await this too
+        removeDirectory(extractedPath);
+
+    } catch (error) {
+        console.error('Error processing the zip file:', error);
+        res.status(500).send('Error processing the zip file.');
+    }
 });
+
 
 /**
  * @swagger
